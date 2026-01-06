@@ -7,13 +7,19 @@ const User = require('./models/User');
 
 dotenv.config();
 
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => seedData())
-    .catch(err => console.log(err));
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/checker')
+    .then(async () => {
+        console.log('Connected to MongoDB. Starting Seed...');
+        await seedData();
+    })
+    .catch(err => {
+        console.error('CRITICAL: MongoDB Connection Failed!', err.message);
+        process.exit(1);
+    });
 
 async function seedData() {
-    console.log('Seeding Data...');
     try {
+        console.log('Clearing old data (especially Hospitals)...');
         await Medicine.deleteMany({});
         await Pharmacy.deleteMany({});
         await Stock.deleteMany({});
@@ -101,40 +107,55 @@ async function seedData() {
             role: 'pharmacy_owner'
         });
 
-        // Create Pharmacies
+        // Create Retail Medicals in Trichy and Delhi
         const pharmacies = await Pharmacy.insertMany([
-            { name: 'Apollo Pharmacy', address: '123 Main St', owner_id: user._id, location: { type: 'Point', coordinates: [77.2090, 28.6139] } }, // Delhi example
-            { name: 'Wellness Forever', address: '456 Market Rd', owner_id: user._id, location: { type: 'Point', coordinates: [77.2100, 28.6100] } }
+            {
+                name: 'Kauvery Medicals - Cantonment',
+                address: 'Cantonment Area, Trichy',
+                owner_id: user._id,
+                location: { type: 'Point', coordinates: [78.6835, 10.8158] }
+            },
+            {
+                name: 'Apollo Pharmacy - Thillai Nagar',
+                address: 'Main Road, Thillai Nagar, Trichy',
+                owner_id: user._id,
+                location: { type: 'Point', coordinates: [78.6865, 10.8285] }
+            },
+            {
+                name: 'MedPlus Medical Store',
+                address: 'Tennur High Road, Trichy',
+                owner_id: user._id,
+                location: { type: 'Point', coordinates: [78.6890, 10.8250] }
+            },
+            {
+                name: 'Trichy Central Medicals',
+                address: 'Near Central Bus Stand, Trichy',
+                owner_id: user._id,
+                location: { type: 'Point', coordinates: [78.6780, 10.8100] }
+            },
+            {
+                name: 'City Pharma & Medicals',
+                address: 'Chatram Bus Stand, Trichy',
+                owner_id: user._id,
+                location: { type: 'Point', coordinates: [78.6940, 10.8350] }
+            }
         ]);
 
-        // Create Stock - Add all medicines to both pharmacies with different prices
-        await Stock.insertMany([
-            // Apollo Pharmacy stock
-            { medicine: meds[0]._id, pharmacy: pharmacies[0]._id, price: 20, quantity: 100 },
-            { medicine: meds[1]._id, pharmacy: pharmacies[0]._id, price: 30, quantity: 50 },
-            { medicine: meds[2]._id, pharmacy: pharmacies[0]._id, price: 28, quantity: 75 },
-            { medicine: meds[3]._id, pharmacy: pharmacies[0]._id, price: 150, quantity: 10 },
-            { medicine: meds[4]._id, pharmacy: pharmacies[0]._id, price: 85, quantity: 30 },
-            { medicine: meds[5]._id, pharmacy: pharmacies[0]._id, price: 15, quantity: 120 },
-            { medicine: meds[6]._id, pharmacy: pharmacies[0]._id, price: 95, quantity: 60 },
-            { medicine: meds[7]._id, pharmacy: pharmacies[0]._id, price: 25, quantity: 90 },
-            { medicine: meds[8]._id, pharmacy: pharmacies[0]._id, price: 12, quantity: 150 },
-            { medicine: meds[9]._id, pharmacy: pharmacies[0]._id, price: 45, quantity: 80 },
+        // Create Stock for all pharmacies
+        const stockData = [];
+        pharmacies.forEach(pharma => {
+            meds.forEach(med => {
+                stockData.push({
+                    medicine: med._id,
+                    pharmacy: pharma._id,
+                    price: Math.floor(Math.random() * (200 - 10 + 1)) + 10,
+                    quantity: Math.floor(Math.random() * 100) + 20
+                });
+            });
+        });
+        await Stock.insertMany(stockData);
 
-            // Wellness Forever stock (with different prices for comparison)
-            { medicine: meds[0]._id, pharmacy: pharmacies[1]._id, price: 22, quantity: 80 },
-            { medicine: meds[1]._id, pharmacy: pharmacies[1]._id, price: 28, quantity: 40 },
-            { medicine: meds[2]._id, pharmacy: pharmacies[1]._id, price: 30, quantity: 60 },
-            { medicine: meds[3]._id, pharmacy: pharmacies[1]._id, price: 145, quantity: 15 },
-            { medicine: meds[4]._id, pharmacy: pharmacies[1]._id, price: 90, quantity: 25 },
-            { medicine: meds[5]._id, pharmacy: pharmacies[1]._id, price: 14, quantity: 100 },
-            { medicine: meds[6]._id, pharmacy: pharmacies[1]._id, price: 100, quantity: 50 },
-            { medicine: meds[7]._id, pharmacy: pharmacies[1]._id, price: 23, quantity: 95 },
-            { medicine: meds[8]._id, pharmacy: pharmacies[1]._id, price: 13, quantity: 140 },
-            { medicine: meds[9]._id, pharmacy: pharmacies[1]._id, price: 42, quantity: 70 }
-        ]);
-
-        console.log('Data Seeded Successfully');
+        console.log('Data Seeded Successfully with Trichy Landmarks');
         process.exit();
     } catch (error) {
         console.error(error);

@@ -20,6 +20,18 @@ router.get('/medicine/:medicineId', async (req, res) => {
     }
 });
 
+// Get all stock for a specific pharmacy
+router.get('/pharmacy/:pharmacyId', async (req, res) => {
+    try {
+        const stocks = await Stock.find({ pharmacy: req.params.pharmacyId })
+            .populate('medicine')
+            .sort({ last_updated: -1 }); // Recently updated first
+        res.json(stocks);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Update Stock (Pharmacy Owner)
 router.post('/update', async (req, res) => {
     try {
